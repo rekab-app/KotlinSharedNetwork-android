@@ -3,11 +3,16 @@ apply plugin: 'kotlinx-serialization'
 
 kotlin {
     targets {
-        final def iOSTarget = System.getenv('SDK_NAME')?.startsWith("iphoneos") \
-                              ? presets.iosArm64 : presets.iosX64
+        // Read the "kotlin.device" variable passed by Xcode
+        def isSim = findProperty("kotlin.device") == "iosSim"
 
-        fromPreset(iOSTarget, 'iOS') {
-            compilations.main.outputKinds('FRAMEWORK')
+        // Apply the preset according to the device
+        def iosPreset = isSim ? presets.iosX64 : presets.iosArm64
+
+        fromPreset(iosPreset, 'iOS') {
+            binaries {
+                framework('SharedNetwork')
+            }
         }
 
         fromPreset(presets.jvm, 'android')
