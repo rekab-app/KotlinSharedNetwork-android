@@ -13,9 +13,8 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonTreeParser
-import kotlinx.serialization.json.content
-import kotlinx.serialization.json.int
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.list
 
 internal expect val dispatcher: CoroutineDispatcher
 
@@ -41,9 +40,7 @@ class ApiClient() {
                     }
                 }
 
-                val repos = JsonTreeParser(result).read().jsonArray
-                        .map { it.jsonObject }
-                        .map { Post(it["userId"].int, it["id"].int, it["title"].content, it["body"].content) }
+                val repos = Json.parse(Post.serializer().list, result)
                 successCallback(repos)
             } catch (ex: Exception) {
                 errorCallback(ex)
