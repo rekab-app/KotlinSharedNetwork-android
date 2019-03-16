@@ -9,23 +9,29 @@ import android.support.v7.widget.LinearLayoutManager
 import android.util.Log
 import com.sixthsolution.rekab.sharednetwork.ApiClient
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
+import kotlin.coroutines.CoroutineContext
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), CoroutineScope {
+    lateinit var job: Job
+
+    override val coroutineContext: CoroutineContext
+        get() = Dispatchers.Main + job
+
+    lateinit var client: ApiClient
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        job = Job()
+        client = ApiClient()
         loadPosts()
     }
 
     private fun loadPosts() {
-        val client = ApiClient()
         client.getPosts(successCallback = {
-            GlobalScope.launch(Dispatchers.Main) {
+            launch {
                 recycler.setHasFixedSize(false)
                 val adapter = PostAdapter(it)
                 val layoutManager = LinearLayoutManager(this@MainActivity)
@@ -33,9 +39,16 @@ class MainActivity : AppCompatActivity() {
                 recycler.adapter = adapter
             }
         }, errorCallback = {
-            GlobalScope.launch(Dispatchers.Main) {
+            launch {
                 Log.e("Get Post Error", it.message)
             }
         })
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
+        job.cancel()
+        client.dispose()
     }
 }

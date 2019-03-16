@@ -9,17 +9,21 @@ import io.ktor.client.features.json.JsonFeature
 import io.ktor.client.features.json.serializer.KotlinxSerializer
 import io.ktor.client.request.get
 import io.ktor.http.URLProtocol
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.list
+import kotlin.coroutines.CoroutineContext
 
 internal expect val dispatcher: CoroutineDispatcher
 
-class ApiClient() {
-    private val httpClient = HttpClient() {
+class ApiClient: CoroutineScope {
+    private var job: Job = Job()
+
+    override val coroutineContext: CoroutineContext
+        get() = dispatcher + job
+
+    private val httpClient = HttpClient {
         install(JsonFeature) {
             serializer = KotlinxSerializer().apply {
                 setMapper(Post::class, Post.serializer())
@@ -29,7 +33,7 @@ class ApiClient() {
     }
 
     fun getPosts(successCallback: (List<Post>) -> Unit, errorCallback: (Exception) -> Unit) {
-        GlobalScope.launch(dispatcher) {
+        launch {
             try {
                 val result: String = httpClient.get {
                     url {
@@ -46,6 +50,10 @@ class ApiClient() {
                 errorCallback(ex)
             }
         }
+    }
+
+    fun dispose() {
+        job.cancel()
     }
 }
 
